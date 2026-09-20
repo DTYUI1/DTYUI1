@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="6" viewBox="0 0 1000 6" preserveAspectRatio="none" role="presentation">
+<defs>
+  <linearGradient id="line" x1="0" x2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity="0"/><stop offset="0.5" stop-color="#06b6d4" stop-opacity="0.8"/><stop offset="1" stop-color="#ec4899" stop-opacity="0"/></linearGradient>
+  <linearGradient id="spark" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#06b6d4" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs>
+<rect x="0" y="2.25" width="1000" height="1.5" fill="url(#line)"/>
+<rect x="-160" y="1.5" width="160" height="3" rx="1.5" fill="url(#spark)"><animate attributeName="x" from="-160" to="1000" dur="4s" repeatCount="indefinite"/></rect>
+</svg>
