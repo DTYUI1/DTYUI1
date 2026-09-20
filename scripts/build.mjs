@@ -146,8 +146,8 @@ function header(theme) {
   ${tw.defs}
 </defs>
 <text x="40" y="66" font-family="${MONO}" font-size="14" fill="${t.muted}"><tspan fill="${t.grad[1]}">~</tspan> $ whoami</text>
-<text x="38" y="128" font-family="${SANS}" font-size="58" font-weight="800" letter-spacing="-1.5" fill="url(#nameGrad)">Ярослав Тихонов</text>
-<text x="40" y="150" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
+<text x="39" y="122" font-family="${SANS}" font-size="46" font-weight="800" letter-spacing="-1" fill="url(#nameGrad)">Ярослав Тихонов</text>
+<text x="40" y="146" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
 ${tw.body}
 <text x="40" y="226" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
 ${agentGraph(t)}
