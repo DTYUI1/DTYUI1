@@ -17,9 +17,8 @@ Frontend-разработчик, которого затянуло в AI-аге�
 <img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/terminal.svg" width="100%" alt="agent --introspect @DTYUI1: frontend — React, Next.js, TypeScript, Tailwind, Framer Motion; агенты — Claude, MCP, tool-use, мультиагентная оркестрация; backend — Node.js, Python, PostgreSQL, Docker; окружение — Arch Linux, Claude Code, GitHub Actions">
 
 <div align="center">
-  <!-- TODO: подставить свои ссылки -->
-  <a href="https://t.me/CHANGE_ME"><img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/btn-telegram.svg" alt="Telegram" height="40"></a>&nbsp;
-  <a href="mailto:CHANGE_ME"><img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/btn-email.svg" alt="Написать" height="40"></a>
+  <a href="https://t.me/artwox"><img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/btn-telegram.svg" alt="Telegram" height="40"></a>&nbsp;
+  <a href="mailto:yuttuh2019@gmail.com"><img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/btn-email.svg" alt="Написать" height="40"></a>
 </div>
 
 <img src="https://raw.githubusercontent.com/DTYUI1/DTYUI1/main/assets/divider.svg" width="100%" height="6" alt="">
