@@ -130,7 +130,7 @@ function header(theme) {
   const t = THEMES[theme];
   const W = 1000, H = 262;
   const tw = typewriter({
-    id: 'tw', x: 40, y: 178, size: 22, color: t.fg, cursorColor: t.grad[1],
+    id: 'tw', x: 40, y: 185, size: 22, color: t.fg, cursorColor: t.grad[1],
     phrases: ['frontend-разработчик', 'делаю AI-агентов', 'React · TypeScript · Node.js', 'MCP · tool-use · оркестрация', 'и да, я люблю пиццу'],
   });
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Ярослав Тихонов — frontend-разработчик, AI-агенты">
@@ -147,9 +147,9 @@ function header(theme) {
 </defs>
 <text x="40" y="66" font-family="${MONO}" font-size="14" fill="${t.muted}"><tspan fill="${t.grad[1]}">~</tspan> $ whoami</text>
 <text x="39" y="122" font-family="${SANS}" font-size="46" font-weight="800" letter-spacing="-1" fill="url(#nameGrad)">Ярослав Тихонов</text>
-<text x="40" y="146" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
+<text x="40" y="151" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
 ${tw.body}
-<text x="40" y="226" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
+<text x="40" y="231" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
 ${agentGraph(t)}
 </svg>`;
 }
