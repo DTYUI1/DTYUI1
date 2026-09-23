@@ -16,12 +16,18 @@ const THEMES = {
   dark: {
     fg: '#e6edf3', muted: '#8b949e', faint: '#484f58',
     grad: ['#a78bfa', '#22d3ee', '#f472b6'],
-    edge: '#8b949e', edgeOpacity: 0.28, packet: '#22d3ee', node: '#a78bfa', ring: '#22d3ee',
+    edge: '#8b949e', edgeOpacity: 0.28, packet: '#67e8f9', ring: '#22d3ee',
+    sats: ['#22d3ee', '#a78bfa', '#f472b6'],
+    planet: ['#ede9fe', '#8b5cf6', '#2e1065'], bands: ['#22d3ee', '#f472b6'], bandOpacity: 0.4,
+    shade: '#05070d', shadeOpacity: 0.7, glow: '#8b5cf6', glowOpacity: 0.4, star: '#e6edf3',
   },
   light: {
     fg: '#1f2328', muted: '#656d76', faint: '#8c959f',
     grad: ['#7c3aed', '#0891b2', '#db2777'],
-    edge: '#57606a', edgeOpacity: 0.3, packet: '#0891b2', node: '#7c3aed', ring: '#0891b2',
+    edge: '#57606a', edgeOpacity: 0.3, packet: '#0891b2', ring: '#0891b2',
+    sats: ['#0891b2', '#7c3aed', '#db2777'],
+    planet: ['#ddd6fe', '#7c3aed', '#2e1065'], bands: ['#22d3ee', '#f472b6'], bandOpacity: 0.35,
+    shade: '#1e1b4b', shadeOpacity: 0.45, glow: '#7c3aed', glowOpacity: 0.18, star: '#8c959f',
   },
 };
 
@@ -82,53 +88,129 @@ function typewriter({ id, x, y, phrases, size, color, cw = size * 0.6, cursorCol
 }
 
 // ---------------------------------------------------------------------------
-// Header banner: prompt line, gradient name, typewriter, and an "agent graph"
-// on the right with packets travelling between nodes.
+// Header banner: prompt line, gradient name, typewriter, and the orchestrator
+// planet on the right with agents orbiting it. All orbits lie in one tilted
+// plane; positions are sampled in JS (SMIL can't do parametric ellipses), so
+// motion is faster at the front/back and slower at the sides, like a real
+// circle seen in perspective. Each agent is tethered to the planet and a
+// packet runs along the tether (out to the agent or back to the planet).
 // ---------------------------------------------------------------------------
-function agentGraph(t) {
-  const hub = [810, 130];
-  const nodes = [
-    { p: [686, 62], l: 'plan', lx: -8, ly: -12, anchor: 'end' },
-    { p: [932, 52], l: 'code', lx: 10, ly: -8 },
-    { p: [970, 150], l: 'review', lx: -10, ly: 22, anchor: 'end' },
-    { p: [900, 228], l: 'ui', lx: 12, ly: 4 },
-    { p: [726, 224], l: 'tools', lx: -10, ly: 6, anchor: 'end' },
-    { p: [648, 152], l: 'memory', lx: 4, ly: 24 },
+function orbitSystem(t) {
+  const C = [780, 124];
+  const K = 0.37; // ry / rx — how flat the orbital plane looks
+  const TILT = -7; // degrees, SVG rotate() convention
+  const [ct, st] = [Math.cos((TILT * Math.PI) / 180), Math.sin((TILT * Math.PI) / 180)];
+  const toScreen = (x, y) => [C[0] + x * ct - y * st, C[1] + x * st + y * ct];
+  const r1 = (n) => Number(n.toFixed(1));
+  const anim = (attr, values, dur, extra = '') =>
+    `<animate attributeName="${attr}" values="${values.join(';')}" dur="${dur}s" repeatCount="indefinite"${extra}/>`;
+  const animT = (type, values, dur) =>
+    `<animateTransform attributeName="transform" type="${type}" values="${values.join(';')}" dur="${dur}s" repeatCount="indefinite"/>`;
+  // Half of an ellipse in the orbital plane: back (far, upper) or front (near, lower).
+  const halfArc = (rx, back) => {
+    const [a, b] = [toScreen(-rx, 0), toScreen(rx, 0)];
+    return `M${r1(a[0])} ${r1(a[1])} A${rx} ${r1(rx * K)} ${TILT} 0 ${back ? 1 : 0} ${r1(b[0])} ${r1(b[1])}`;
+  };
+
+  const orbits = [
+    { rx: 88, T: 15, trips: 5, phase: 0.6, sats: [{ l: 'plan', out: true }, { l: 'memory', out: false }] },
+    { rx: 138, T: 24, trips: 6, phase: 2.2, sats: [{ l: 'tools', out: true }, { l: 'code', out: false }] },
+    { rx: 190, T: 36, trips: 8, phase: 4.3, sats: [{ l: 'review', out: false }, { l: 'ui', out: true }] },
   ];
-  const ring = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]];
-  let s = `<g id="graph"><animateTransform attributeName="transform" type="translate" values="0 0;0 -5;0 0" dur="7s" repeatCount="indefinite"/>`;
-  // spokes
-  nodes.forEach((n, i) => {
-    s += `<path id="sp${i}" d="M${hub[0]} ${hub[1]} L${n.p[0]} ${n.p[1]}" stroke="${t.edge}" stroke-opacity="${t.edgeOpacity}" stroke-width="1.2" fill="none"/>`;
+  const STEPS = 15; // samples per packet trip; a trip is T / trips seconds
+
+  let defs = '', stars = '', rails = '', tethers = '', agents = '';
+
+  // twinkling background stars (deterministic LCG so rebuilds are stable)
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 16; i++) {
+    const x = 540 + rnd() * 450, y = 12 + rnd() * 238, r = 0.6 + rnd() * 0.8, d = 2.5 + rnd() * 3.5;
+    stars += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(r)}" fill="${t.star}" opacity="0.2">${anim('opacity', [0.15, 0.7, 0.15], r1(d), ` begin="${r1(rnd() * 4)}s"`)}</circle>`;
+  }
+
+  orbits.forEach((o, oi) => {
+    const color = t.sats[oi];
+    defs += `<radialGradient id="sat${oi}" cx="0.35" cy="0.35" r="0.75"><stop offset="0" stop-color="#fff" stop-opacity="0.9"/><stop offset="0.35" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0.85"/></radialGradient>`;
+    rails += `<path d="${halfArc(o.rx, true)}" stroke="${t.edge}" stroke-opacity="${t.edgeOpacity * 0.55}" stroke-width="1" stroke-dasharray="2 5" fill="none"/>`;
+    rails += `<path d="${halfArc(o.rx, false)}" stroke="${t.edge}" stroke-opacity="${t.edgeOpacity * 1.1}" stroke-width="1" fill="none"/>`;
+
+    const N = o.trips * STEPS;
+    o.sats.forEach((s, si) => {
+      const pos = [], tx2 = [], ty2 = [], scale = [], op = [], pkt = [], pktOp = [];
+      for (let i = 0; i <= N; i++) {
+        // decreasing angle → the near (lower) half moves left-to-right
+        const a = o.phase + si * Math.PI - (2 * Math.PI * i) / N;
+        const depth = Math.sin(a); // +1 nearest to the viewer, -1 farthest
+        const [x, y] = toScreen(o.rx * Math.cos(a), o.rx * K * Math.sin(a));
+        pos.push(`${r1(x)} ${r1(y)}`);
+        tx2.push(r1(x));
+        ty2.push(r1(y));
+        scale.push(r1(1 + 0.22 * depth));
+        op.push(r1(0.55 + 0.45 * (depth + 1) / 2));
+        // packet: j walks 0..STEPS-1 each trip; invisible on the first and
+        // last sample so the jump back to the start is never seen
+        const j = (i + si * 7 + oi * 4) % STEPS;
+        let f = Math.min(j / (STEPS - 2), 1);
+        if (!s.out) f = 1 - f;
+        pkt.push(`${r1(C[0] + f * (x - C[0]))} ${r1(C[1] + f * (y - C[1]))}`);
+        pktOp.push(j === 0 || j === STEPS - 1 ? 0 : 1);
+      }
+      tethers += `<line x1="${C[0]}" y1="${C[1]}" x2="${tx2[0]}" y2="${ty2[0]}" stroke="${color}" stroke-opacity="0.32" stroke-width="1" stroke-dasharray="3 4">` +
+        anim('x2', tx2, o.T) + anim('y2', ty2, o.T) +
+        `<animate attributeName="stroke-dashoffset" from="0" to="${s.out ? -14 : 14}" dur="1.2s" repeatCount="indefinite"/></line>`;
+      tethers += `<circle r="2.4" fill="${t.packet}" opacity="0">` +
+        animT('translate', pkt, o.T) + anim('opacity', pktOp, o.T) + `</circle>`;
+      agents += `<g>` + animT('translate', pos, o.T) + anim('opacity', op, o.T) +
+        `<g>${animT('scale', scale, o.T)}` +
+        `<circle r="11" fill="${color}" opacity="0.14"/><circle r="5" fill="url(#sat${oi})"/></g>` +
+        `<text y="-12" font-family="${MONO}" font-size="11" fill="${t.muted}" text-anchor="middle">${s.l}</text></g>`;
+    });
   });
-  // ring (dashed, slowly flowing)
-  ring.forEach(([a, b], i) => {
-    const A = nodes[a].p, B = nodes[b].p;
-    s += `<path d="M${A[0]} ${A[1]} L${B[0]} ${B[1]}" stroke="${t.edge}" stroke-opacity="${t.edgeOpacity * 0.6}" stroke-width="1" stroke-dasharray="3 7" fill="none"><animate attributeName="stroke-dashoffset" from="0" to="${i % 2 ? 40 : -40}" dur="4s" repeatCount="indefinite"/></path>`;
+
+  // planet: glow, ring (back half behind the body, front half over it),
+  // gradient body with drifting cloud bands and limb shading
+  const R = 22, ringRx = [34, 41];
+  defs += `<radialGradient id="glow"><stop offset="0.3" stop-color="${t.glow}" stop-opacity="${t.glowOpacity}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>`;
+  defs += `<radialGradient id="body" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="${t.planet[0]}"/><stop offset="0.45" stop-color="${t.planet[1]}"/><stop offset="1" stop-color="${t.planet[2]}"/></radialGradient>`;
+  defs += `<radialGradient id="shade" cx="0.32" cy="0.28" r="0.85"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.35" stop-color="#fff" stop-opacity="0"/><stop offset="0.7" stop-color="${t.shade}" stop-opacity="0"/><stop offset="1" stop-color="${t.shade}" stop-opacity="${t.shadeOpacity}"/></radialGradient>`;
+  defs += `<linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${t.grad[1]}" stop-opacity="0.2"/><stop offset="0.5" stop-color="${t.grad[1]}" stop-opacity="0.9"/><stop offset="1" stop-color="${t.grad[2]}" stop-opacity="0.3"/></linearGradient>`;
+  defs += `<filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="1.2"/></filter>`;
+  defs += `<clipPath id="planetClip"><circle cx="${C[0]}" cy="${C[1]}" r="${R}"/></clipPath>`;
+  const ring = (back) => ringRx.map((rx, i) =>
+    `<path d="${halfArc(rx, back)}" stroke="url(#ringGrad)" stroke-width="${i ? 1.2 : 3}" stroke-opacity="${back ? 0.55 : 1}" fill="none"/>`).join('');
+  // bands: copies one period apart, slid by exactly one period → seamless loop
+  const P = 60;
+  let bands = '';
+  [[-13, 5, 0], [-4, 3, 1], [5, 6, 0], [14, 3, 1]].forEach(([y, h, c], i) => {
+    for (let k = -1; k <= 1; k++) {
+      const x0 = C[0] - R + k * P + ((i * 17) % P);
+      bands += `<rect x="${x0}" y="${C[1] + y}" width="${40 - i * 5}" height="${h}" rx="${h / 2}" fill="${t.bands[c]}"/>`;
+    }
   });
-  // packets along spokes, alternating direction, staggered
-  const durs = [2.6, 3.1, 2.4, 3.4, 2.9, 2.2];
-  nodes.forEach((n, i) => {
-    const rev = i % 2 === 1;
-    s += `<circle r="3" fill="${t.packet}" opacity="0"><animateMotion dur="${durs[i]}s" begin="${(i * 0.45).toFixed(2)}s" repeatCount="indefinite" ${rev ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}><mpath href="#sp${i}" xlink:href="#sp${i}"/></animateMotion><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.88;1" dur="${durs[i]}s" begin="${(i * 0.45).toFixed(2)}s" repeatCount="indefinite"/></circle>`;
-  });
-  // satellite nodes + labels
-  nodes.forEach((n, i) => {
-    s += `<circle cx="${n.p[0]}" cy="${n.p[1]}" r="5" fill="${t.node}"><animate attributeName="r" values="5;6.5;5" dur="${3 + i * 0.4}s" begin="${i * 0.3}s" repeatCount="indefinite"/></circle>`;
-    s += `<text x="${n.p[0] + n.lx}" y="${n.p[1] + n.ly}" font-family="${MONO}" font-size="11" fill="${t.muted}" text-anchor="${n.anchor || 'start'}">${n.l}</text>`;
-  });
-  // hub: ripple + gradient core
-  s += `<circle cx="${hub[0]}" cy="${hub[1]}" r="10" fill="none" stroke="${t.ring}" stroke-width="1.5"><animate attributeName="r" values="10;30" dur="2.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.7;0" dur="2.8s" repeatCount="indefinite"/></circle>`;
-  s += `<circle cx="${hub[0]}" cy="${hub[1]}" r="10" fill="none" stroke="${t.ring}" stroke-width="1.5"><animate attributeName="r" values="10;30" dur="2.8s" begin="1.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;0.7;0" keyTimes="0;0.01;1" dur="2.8s" begin="1.4s" repeatCount="indefinite"/></circle>`;
-  s += `<circle cx="${hub[0]}" cy="${hub[1]}" r="10" fill="url(#hubGrad)"/>`;
-  s += `<text x="${hub[0]}" y="${hub[1] + 30}" font-family="${MONO}" font-size="11" fill="${t.muted}" text-anchor="middle">orchestrator</text>`;
-  s += `</g>`;
-  return s;
+  const planet =
+    `<circle cx="${C[0]}" cy="${C[1]}" r="62" fill="url(#glow)">${anim('r', [58, 66, 58], 6)}</circle>` +
+    // signal waves spreading through the orbital plane
+    [0, 2.5].map((b) => `<ellipse cx="0" cy="0" rx="30" ry="${r1(30 * K)}" fill="none" stroke="${t.ring}" stroke-width="1" opacity="0" transform="translate(${C[0]} ${C[1]}) rotate(${TILT})">` +
+      `<animate attributeName="rx" values="30;200" dur="5s" begin="${b}s" repeatCount="indefinite"/><animate attributeName="ry" values="${r1(30 * K)};${r1(200 * K)}" dur="5s" begin="${b}s" repeatCount="indefinite"/>` +
+      `<animate attributeName="opacity" values="0;0.3;0" keyTimes="0;0.1;1" dur="5s" begin="${b}s" repeatCount="indefinite"/></ellipse>`).join('');
+  const body =
+    ring(true) +
+    `<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="url(#body)"/>` +
+    `<g clip-path="url(#planetClip)"><g transform="rotate(${TILT} ${C[0]} ${C[1]})" opacity="${t.bandOpacity}"><g filter="url(#soft)">${animT('translate', ['0 0', `${P} 0`], 9)}${bands}</g></g></g>` +
+    `<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="url(#shade)"/>` +
+    ring(false);
+
+  const svg = `<g id="orbits">${stars}${planet}${rails}${tethers}${body}${agents}` +
+    `<circle cx="${C[0] - 42}" cy="227" r="3" fill="none" stroke="${t.ring}" stroke-width="1.5"/>` +
+    `<text x="${C[0] - 34}" y="231" font-family="${MONO}" font-size="11" fill="${t.muted}">orchestrator</text></g>`;
+  return { defs, svg };
 }
 
 function header(theme) {
   const t = THEMES[theme];
   const W = 1000, H = 262;
+  const orbit = orbitSystem(t);
   const tw = typewriter({
     id: 'tw', x: 40, y: 185, size: 22, color: t.fg, cursorColor: t.grad[1],
     phrases: ['frontend-разработчик', 'делаю AI-агентов', 'React · TypeScript · Node.js', 'MCP · tool-use · оркестрация', 'и да, я люблю пиццу'],
@@ -140,17 +222,15 @@ function header(theme) {
     <stop offset="0" stop-color="${t.grad[0]}"/><stop offset="0.5" stop-color="${t.grad[1]}"/><stop offset="1" stop-color="${t.grad[2]}"/>
     <animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="1040 0" dur="12s" repeatCount="indefinite"/>
   </linearGradient>
-  <linearGradient id="hubGrad" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="${t.grad[0]}"/><stop offset="1" stop-color="${t.grad[1]}"/>
-  </linearGradient>
   ${tw.defs}
+  ${orbit.defs}
 </defs>
 <text x="40" y="66" font-family="${MONO}" font-size="14" fill="${t.muted}"><tspan fill="${t.grad[1]}">~</tspan> $ whoami</text>
 <text x="39" y="122" font-family="${SANS}" font-size="46" font-weight="800" letter-spacing="-1" fill="url(#nameGrad)">Ярослав Тихонов</text>
 <text x="40" y="151" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
 ${tw.body}
 <text x="40" y="231" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
-${agentGraph(t)}
+${orbit.svg}
 </svg>`;
 }
 
