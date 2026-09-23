@@ -19,7 +19,7 @@ const THEMES = {
     edge: '#8b949e', edgeOpacity: 0.28, packet: '#67e8f9', ring: '#22d3ee',
     sats: ['#22d3ee', '#a78bfa', '#f472b6'],
     planet: ['#ede9fe', '#8b5cf6', '#2e1065'], bands: ['#22d3ee', '#f472b6'], bandOpacity: 0.4,
-    shade: '#05070d', shadeOpacity: 0.7, glow: '#8b5cf6', glowOpacity: 0.4, star: '#e6edf3',
+    shade: '#05070d', shadeOpacity: 0.7, glow: '#8b5cf6', glowOpacity: 0.4, star: '#e6edf3', tag: '#1a1433',
   },
   light: {
     fg: '#1f2328', muted: '#656d76', faint: '#8c959f',
@@ -27,7 +27,7 @@ const THEMES = {
     edge: '#57606a', edgeOpacity: 0.3, packet: '#0891b2', ring: '#0891b2',
     sats: ['#0891b2', '#7c3aed', '#db2777'],
     planet: ['#ddd6fe', '#7c3aed', '#2e1065'], bands: ['#22d3ee', '#f472b6'], bandOpacity: 0.35,
-    shade: '#1e1b4b', shadeOpacity: 0.45, glow: '#7c3aed', glowOpacity: 0.18, star: '#8c959f',
+    shade: '#1e1b4b', shadeOpacity: 0.45, glow: '#7c3aed', glowOpacity: 0.18, star: '#8c959f', tag: '#f5f3ff',
   },
 };
 
@@ -95,9 +95,9 @@ function typewriter({ id, x, y, phrases, size, color, cw = size * 0.6, cursorCol
 // circle seen in perspective. Each agent is tethered to the planet and a
 // packet runs along the tether (out to the agent or back to the planet).
 // ---------------------------------------------------------------------------
-function orbitSystem(t) {
-  const C = [780, 124];
-  const K = 0.37; // ry / rx — how flat the orbital plane looks
+function orbitSystem(t, H) {
+  const C = [745, H / 2];
+  const K = 0.46; // ry / rx — how flat the orbital plane looks
   const TILT = -7; // degrees, SVG rotate() convention
   const [ct, st] = [Math.cos((TILT * Math.PI) / 180), Math.sin((TILT * Math.PI) / 180)];
   const toScreen = (x, y) => [C[0] + x * ct - y * st, C[1] + x * st + y * ct];
@@ -113,9 +113,9 @@ function orbitSystem(t) {
   };
 
   const orbits = [
-    { rx: 88, T: 15, trips: 5, phase: 0.6, sats: [{ l: 'plan', out: true }, { l: 'memory', out: false }] },
-    { rx: 138, T: 24, trips: 6, phase: 2.2, sats: [{ l: 'tools', out: true }, { l: 'code', out: false }] },
-    { rx: 190, T: 36, trips: 8, phase: 4.3, sats: [{ l: 'review', out: false }, { l: 'ui', out: true }] },
+    { rx: 122, T: 18, trips: 6, phase: 0.6, sats: [{ l: 'plan', out: true }, { l: 'memory', out: false }] },
+    { rx: 176, T: 26, trips: 6, phase: 1.7, sats: [{ l: 'tools', out: true }, { l: 'code', out: false }] },
+    { rx: 228, T: 36, trips: 8, phase: 2.8, sats: [{ l: 'review', out: false }, { l: 'ui', out: true }] },
   ];
   const STEPS = 15; // samples per packet trip; a trip is T / trips seconds
 
@@ -125,7 +125,7 @@ function orbitSystem(t) {
   let seed = 7;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let i = 0; i < 16; i++) {
-    const x = 540 + rnd() * 450, y = 12 + rnd() * 238, r = 0.6 + rnd() * 0.8, d = 2.5 + rnd() * 3.5;
+    const x = 520 + rnd() * 470, y = 12 + rnd() * (H - 24), r = 0.6 + rnd() * 0.8, d = 2.5 + rnd() * 3.5;
     stars += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(r)}" fill="${t.star}" opacity="0.2">${anim('opacity', [0.15, 0.7, 0.15], r1(d), ` begin="${r1(rnd() * 4)}s"`)}</circle>`;
   }
 
@@ -164,13 +164,13 @@ function orbitSystem(t) {
       agents += `<g>` + animT('translate', pos, o.T) + anim('opacity', op, o.T) +
         `<g>${animT('scale', scale, o.T)}` +
         `<circle r="11" fill="${color}" opacity="0.14"/><circle r="5" fill="url(#sat${oi})"/></g>` +
-        `<text y="-12" font-family="${MONO}" font-size="11" fill="${t.muted}" text-anchor="middle">${s.l}</text></g>`;
+        `<text y="19" font-family="${MONO}" font-size="11" fill="${t.muted}" text-anchor="middle">${s.l}</text></g>`;
     });
   });
 
   // planet: glow, ring (back half behind the body, front half over it),
   // gradient body with drifting cloud bands and limb shading
-  const R = 22, ringRx = [34, 41];
+  const R = 24, ringRx = [37, 45];
   defs += `<radialGradient id="glow"><stop offset="0.3" stop-color="${t.glow}" stop-opacity="${t.glowOpacity}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>`;
   defs += `<radialGradient id="body" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="${t.planet[0]}"/><stop offset="0.45" stop-color="${t.planet[1]}"/><stop offset="1" stop-color="${t.planet[2]}"/></radialGradient>`;
   defs += `<radialGradient id="shade" cx="0.32" cy="0.28" r="0.85"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.35" stop-color="#fff" stop-opacity="0"/><stop offset="0.7" stop-color="${t.shade}" stop-opacity="0"/><stop offset="1" stop-color="${t.shade}" stop-opacity="${t.shadeOpacity}"/></radialGradient>`;
@@ -189,10 +189,10 @@ function orbitSystem(t) {
     }
   });
   const planet =
-    `<circle cx="${C[0]}" cy="${C[1]}" r="62" fill="url(#glow)">${anim('r', [58, 66, 58], 6)}</circle>` +
+    `<circle cx="${C[0]}" cy="${C[1]}" r="68" fill="url(#glow)">${anim('r', [64, 72, 64], 6)}</circle>` +
     // signal waves spreading through the orbital plane
     [0, 2.5].map((b) => `<ellipse cx="0" cy="0" rx="30" ry="${r1(30 * K)}" fill="none" stroke="${t.ring}" stroke-width="1" opacity="0" transform="translate(${C[0]} ${C[1]}) rotate(${TILT})">` +
-      `<animate attributeName="rx" values="30;200" dur="5s" begin="${b}s" repeatCount="indefinite"/><animate attributeName="ry" values="${r1(30 * K)};${r1(200 * K)}" dur="5s" begin="${b}s" repeatCount="indefinite"/>` +
+      `<animate attributeName="rx" values="30;240" dur="5s" begin="${b}s" repeatCount="indefinite"/><animate attributeName="ry" values="${r1(30 * K)};${r1(240 * K)}" dur="5s" begin="${b}s" repeatCount="indefinite"/>` +
       `<animate attributeName="opacity" values="0;0.3;0" keyTimes="0;0.1;1" dur="5s" begin="${b}s" repeatCount="indefinite"/></ellipse>`).join('');
   const body =
     ring(true) +
@@ -201,18 +201,21 @@ function orbitSystem(t) {
     `<circle cx="${C[0]}" cy="${C[1]}" r="${R}" fill="url(#shade)"/>` +
     ring(false);
 
-  const svg = `<g id="orbits">${stars}${planet}${rails}${tethers}${body}${agents}` +
-    `<circle cx="${C[0] - 42}" cy="227" r="3" fill="none" stroke="${t.ring}" stroke-width="1.5"/>` +
-    `<text x="${C[0] - 34}" y="231" font-family="${MONO}" font-size="11" fill="${t.muted}">orchestrator</text></g>`;
+  // name tag right under the planet; the inner orbit is wide enough to pass below it
+  const tagW = 96, tagY = C[1] + R + 6;
+  const tag = `<rect x="${C[0] - tagW / 2}" y="${tagY}" width="${tagW}" height="17" rx="8.5" fill="${t.tag}" stroke="${t.ring}" stroke-opacity="0.55"/>` +
+    `<text x="${C[0]}" y="${tagY + 12.5}" font-family="${MONO}" font-size="11" fill="${t.fg}" text-anchor="middle">orchestrator</text>`;
+
+  const svg = `<g id="orbits">${stars}${planet}${rails}${tethers}${body}${tag}${agents}</g>`;
   return { defs, svg };
 }
 
 function header(theme) {
   const t = THEMES[theme];
-  const W = 1000, H = 262;
-  const orbit = orbitSystem(t);
+  const W = 1000, H = 290;
+  const orbit = orbitSystem(t, H);
   const tw = typewriter({
-    id: 'tw', x: 40, y: 185, size: 22, color: t.fg, cursorColor: t.grad[1],
+    id: 'tw', x: 40, y: 199, size: 22, color: t.fg, cursorColor: t.grad[1],
     phrases: ['frontend-разработчик', 'делаю AI-агентов', 'React · TypeScript · Node.js', 'MCP · tool-use · оркестрация', 'и да, я люблю пиццу'],
   });
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Ярослав Тихонов — frontend-разработчик, AI-агенты">
@@ -225,11 +228,11 @@ function header(theme) {
   ${tw.defs}
   ${orbit.defs}
 </defs>
-<text x="40" y="66" font-family="${MONO}" font-size="14" fill="${t.muted}"><tspan fill="${t.grad[1]}">~</tspan> $ whoami</text>
-<text x="39" y="122" font-family="${SANS}" font-size="46" font-weight="800" letter-spacing="-1" fill="url(#nameGrad)">Ярослав Тихонов</text>
-<text x="40" y="151" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
+<text x="40" y="80" font-family="${MONO}" font-size="14" fill="${t.muted}"><tspan fill="${t.grad[1]}">~</tspan> $ whoami</text>
+<text x="39" y="136" font-family="${SANS}" font-size="46" font-weight="800" letter-spacing="-1" fill="url(#nameGrad)">Ярослав Тихонов</text>
+<text x="40" y="165" font-family="${MONO}" font-size="13" fill="${t.faint}">@DTYUI1</text>
 ${tw.body}
-<text x="40" y="231" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
+<text x="40" y="245" font-family="${MONO}" font-size="12" fill="${t.faint}">frontend  ·  ai agents  ·  telegram bots  ·  arch linux</text>
 ${orbit.svg}
 </svg>`;
 }
