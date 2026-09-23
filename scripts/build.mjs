@@ -202,7 +202,7 @@ function orbitSystem(t, H) {
     ring(false);
 
   // name tag right under the planet; the inner orbit is wide enough to pass below it
-  const tagW = 96, tagY = C[1] + R + 6;
+  const tagW = 96, tagY = C[1] + R + 1;
   const tag = `<rect x="${C[0] - tagW / 2}" y="${tagY}" width="${tagW}" height="17" rx="8.5" fill="${t.tag}" stroke="${t.ring}" stroke-opacity="0.55"/>` +
     `<text x="${C[0]}" y="${tagY + 12.5}" font-family="${MONO}" font-size="11" fill="${t.fg}" text-anchor="middle">orchestrator</text>`;
 
